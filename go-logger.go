@@ -25,20 +25,23 @@ var (
 	// ErrorWebhook Webhook to write error output to.
 	ErrorWebhook = ""
 
-	// Should we only show the last file
+	// SingleFile Should we only show the last file
 	SingleFile = false
 
-	// Skip time prefix
+	// SkipTime time prefix
 	SkipTime = false
 
-	// IncludeFunction
+	// IncludeFunction ...
 	IncludeFunction = true
 
-	// Should we display without date
+	// SkipDate should we display without date
 	SkipDate = false
 
-	// Skipseverity should we skip showing [INFO], [DEBUG], [WARNING]... [ERROR] is always shown
+	// SkipSeverity should we skip showing [INFO], [DEBUG], [WARNING]... [ERROR] is always shown
 	SkipSeverity = false
+
+	// SkipFile should we skip showing filename
+	SkipFile = false
 
 	// ApplicationTitle string
 	ApplicationTitle = ""
@@ -46,7 +49,7 @@ var (
 	// OutputJSON filename to log json data to
 	OutputJSON = ""
 
-	// LenAlways
+	// LenAlways ...
 	LenAlways = -1
 
 	// private output file pointer variable, keeps open.
@@ -336,6 +339,10 @@ func outputMessage(message interface{}, messageType string, args ...interface{})
 		fileAndDate := fmt.Sprintf("[%s]%s", files, empty)
 		if SkipSeverity == false {
 			fileAndDate = fmt.Sprintf("[%s] [%s]%s", files, messageType, empty)
+		}
+
+		if SkipFile {
+			fileAndDate = strings.Replace("[%s] ", files, "", 1)
 		}
 
 		info := ""
