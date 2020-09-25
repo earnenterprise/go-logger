@@ -342,7 +342,7 @@ func outputMessage(message interface{}, messageType string, args ...interface{})
 		}
 
 		if SkipFile {
-			fileAndDate = strings.Replace("[%s] ", files, "", 1)
+			fileAndDate = strings.Replace(fileAndDate, files, "", 1)
 		}
 
 		info := ""
