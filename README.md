@@ -1,13 +1,13 @@
 **INSTALLATION**
 
-go get gitlab.com/dlarssonse/go-logger
+go get github.com/earnenterprise/go-logger
 
 **EXAMPLE**
 
 ```golang
 package main
 
-import glog "gitlab.com/dlarssonse/go-logger"
+import glog "github.com/earnenterprise/go-logger"
 
 type User struct {
   Username string
