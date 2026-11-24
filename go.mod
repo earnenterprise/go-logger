@@ -1,3 +1,3 @@
 module github.com/earnenterprise/go-logger
 
-go 1.15
+go 1.27

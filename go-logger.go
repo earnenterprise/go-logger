@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 )
@@ -73,12 +74,12 @@ var (
 )
 
 type jsonLOG struct {
-	Time          string      `json:"time,omitempty"`
-	Files         string      `json:"files,omitempty"`
-	Severity      string      `json:"severity,omitempty"`
-	User          string      `json:"user,omitempty"`
-	ExecutionTime string      `json:"executionTime,omitempty"`
-	Message       interface{} `json:"message,omitempty"`
+	Time          string `json:"time,omitempty"`
+	Files         string `json:"files,omitempty"`
+	Severity      string `json:"severity,omitempty"`
+	User          string `json:"user,omitempty"`
+	ExecutionTime string `json:"executionTime,omitempty"`
+	Message       any    `json:"message,omitempty"`
 }
 
 const (
@@ -117,8 +118,8 @@ func (j *jsonLOG) Parse() {
 		b := strings.LastIndex(j.Message.(string), ")")
 		if a > 0 && b > 0 {
 			submsg := j.Message.(string)[a+1 : b]
-			submsgs := strings.Split(submsg, ", ")
-			for _, subm := range submsgs {
+			submsgs := strings.SplitSeq(submsg, ", ")
+			for subm := range submsgs {
 				txt := strings.Split(subm, ": ")
 				if len(txt) > 1 {
 					switch txt[0] {
@@ -134,38 +135,38 @@ func (j *jsonLOG) Parse() {
 }
 
 // Printf outputs as Info
-func Printf(message interface{}, args ...interface{}) {
+func Printf(message any, args ...any) {
 	Info(message, args...)
 }
 
 // Debug outputs a debug message to the output and/or logfile
-func Debug(message interface{}, args ...interface{}) {
+func Debug(message any, args ...any) {
 	if OutputDebug {
 		outputMessage(message, "DEBUG", args...)
 	}
 }
 
 // Info outputs a info message to the output and/or logfile
-func Info(message interface{}, args ...interface{}) {
+func Info(message any, args ...any) {
 	if OutputInfo {
 		outputMessage(message, "INFO", args...)
 	}
 }
 
 // Warning outputs a warning message to the output and/or logfile
-func Warning(message interface{}, args ...interface{}) {
+func Warning(message any, args ...any) {
 	if OutputWarning {
 		outputMessage(message, "WARNING", args...)
 	}
 }
 
 // Error outputs a error message to the default output and/or logfile
-func Error(message interface{}, args ...interface{}) {
+func Error(message any, args ...any) {
 	outputMessage(message, "ERROR", args...)
 }
 
 // Fatalf outputs a fatal message to the output and/or logfile
-func Fatalf(message interface{}, args ...interface{}) {
+func Fatalf(message any, args ...any) {
 	outputMessage(message, "FATAL", args...)
 }
 
@@ -191,7 +192,7 @@ func Close() {
 	outputFile = nil
 }
 
-func getInterfaceAsString(message interface{}, indent int) string {
+func getInterfaceAsString(message any, indent int) string {
 
 	//name := reflect.TypeOf(message).Name()
 
@@ -261,7 +262,7 @@ func getInterfaceAsString(message interface{}, indent int) string {
 }
 
 // outputMessage outputs the log to file and/or console.
-func outputMessage(message interface{}, messageType string, args ...interface{}) {
+func outputMessage(message any, messageType string, args ...any) {
 	var err error
 	var files string
 
@@ -298,13 +299,7 @@ func outputMessage(message interface{}, messageType string, args ...interface{})
 				break
 			}
 			if file != "go-logger.go" {
-				ignore := false
-				for _, ignoredFile := range IgnoredFiles {
-					if ignoredFile == file {
-						ignore = true
-						break
-					}
-				}
+				ignore := slices.Contains(IgnoredFiles, file)
 				if !ignore {
 					if files != "" {
 						files = "," + files
@@ -324,7 +319,7 @@ func outputMessage(message interface{}, messageType string, args ...interface{})
 
 	if OutputConsole {
 
-		empty := ""
+		var empty strings.Builder
 		if LenAlways > 0 {
 
 			textLen := len(fmt.Sprintf("[%s]", files))
@@ -332,13 +327,13 @@ func outputMessage(message interface{}, messageType string, args ...interface{})
 				files = files[textLen-LenAlways:]
 			}
 			for i := LenAlways - textLen; i > 0; i-- {
-				empty += " "
+				empty.WriteString(" ")
 			}
 		}
 
-		fileAndDate := fmt.Sprintf("[%s]%s", files, empty)
+		fileAndDate := fmt.Sprintf("[%s]%s", files, empty.String())
 		if SkipSeverity == false {
-			fileAndDate = fmt.Sprintf("[%s] [%s]%s", files, messageType, empty)
+			fileAndDate = fmt.Sprintf("[%s] [%s]%s", files, messageType, empty.String())
 		}
 
 		if SkipFile {
@@ -348,15 +343,15 @@ func outputMessage(message interface{}, messageType string, args ...interface{})
 		info := ""
 		switch messageType {
 		case "ERROR":
-			info = fmt.Sprintf(ErrorColor, fmt.Sprintf("%s%s", fileAndDate, empty))
+			info = fmt.Sprintf(ErrorColor, fmt.Sprintf("%s%s", fileAndDate, empty.String()))
 		case "INFO":
-			info = fmt.Sprintf(InfoColor, fmt.Sprintf("%s%s", fileAndDate, empty))
+			info = fmt.Sprintf(InfoColor, fmt.Sprintf("%s%s", fileAndDate, empty.String()))
 		case "DEBUG":
-			info = fmt.Sprintf(DebugColor, fmt.Sprintf("%s%s", fileAndDate, empty))
+			info = fmt.Sprintf(DebugColor, fmt.Sprintf("%s%s", fileAndDate, empty.String()))
 		case "WARNING":
-			info = fmt.Sprintf(WarningColor, fmt.Sprintf("%s%s", fileAndDate, empty))
+			info = fmt.Sprintf(WarningColor, fmt.Sprintf("%s%s", fileAndDate, empty.String()))
 		case "NOTICE":
-			info = fmt.Sprintf(NoticeColor, fmt.Sprintf("%s%s", fileAndDate, empty))
+			info = fmt.Sprintf(NoticeColor, fmt.Sprintf("%s%s", fileAndDate, empty.String()))
 		}
 
 		switch messageCast := message.(type) {
@@ -439,7 +434,7 @@ func outputMessage(message interface{}, messageType string, args ...interface{})
 	if ErrorWebhook != "" {
 
 		if messageType == "ERROR" {
-			func(message interface{}, ErrorWebhook string) {
+			func(message any, ErrorWebhook string) {
 				text := ""
 				if len(args) > 0 {
 					text = fmt.Sprintf("%s", fmt.Sprintf(message.(string), args...))
